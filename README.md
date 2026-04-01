@@ -1,6 +1,6 @@
 # Polybaskets
 
-Fast, granular lookup of how good any Polymarket user is at betting on NBA basketball.
+Fast, granular lookup of any Polymarket user's performance betting on NBA basketball.
 
 Search by username or wallet address and get a full breakdown of their NBA betting history — win rate, P&L, every open and closed position, filterable by bet type and date.
 
@@ -19,11 +19,11 @@ No account required. Just paste a username or address and go.
 
 ## Tech stack
 
-- Next.js 15 (App Router) + TypeScript
+- Next.js (App Router) + TypeScript
 - Tailwind CSS + shadcn/ui
-- Redis for caching API responses
+- In-memory cache with TTL eviction (no external dependencies)
 - Polymarket public data API (no key required)
-- Playwright for E2E tests
+- Playwright for E2E tests, Vitest for unit tests
 
 ## Project structure
 
@@ -45,7 +45,9 @@ components/
 
 lib/
 ├── nba.ts                            # NBA market detection & filtering
-├── polymarket.ts                     # Polymarket API client
+├── polymarket.ts                     # Server-side API client
+├── polymarket-client.ts              # Client-side API helpers
+├── cache.ts                          # In-memory TTL cache
 └── types/polymarket.ts               # TypeScript types
 ```
 
@@ -53,14 +55,10 @@ lib/
 
 ```bash
 npm install
-cp .env.example .env.local
-# Set REDIS_URL in .env.local
 npm run dev
 ```
 
-
-Open [http://localhost:3000](http://localhost:3000).
-
+No environment variables needed. Open [http://localhost:3000](http://localhost:3000).
 
 ## Commands
 
@@ -85,29 +83,4 @@ And it's excluded if the title matches known international leagues (EuroLeague, 
 
 ## Deployment
 
-Deploy to Vercel. Set `REDIS_URL` in project environment variables — use Upstash for a hosted Redis instance that works with Vercel's serverless environment.
-
-- [ ] Add CORS configuration (if needed)
-- [ ] Enable Vercel Preview Protection
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Useful Links
-
-- **NextAuth Docs**: https://authjs.dev
-- **shadcn/ui**: https://ui.shadcn.com
-- **Playwright**: https://playwright.dev
-- **Vercel Docs**: https://vercel.com/docs
-
----
-
-**Questions or Issues?**
-- Test with `npm run dev` and `npm run test`
-- Check the [Copilot Instructions](.github/copilot-instructions.md) for detailed architecture and development patterns.
+Deploy to Vercel. No environment variables or external services required — the in-memory cache is per-process and works fine in serverless.
