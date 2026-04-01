@@ -1,12 +1,9 @@
 import axios, { AxiosInstance } from "axios"
 import {
-  PolymarketUser,
   ClosedPosition,
   ClosedPositionsFilters,
   Position,
   PositionsFilters,
-  LeaderboardEntry,
-  LeaderboardFilters,
   Trade,
   TradeFilters,
   PolymarketEvent,
@@ -17,7 +14,7 @@ import {
   getUserClosedPositionsCacheKey,
   getEventCacheKey,
   getMarketCacheKey,
-  getLeaderboardCacheKey,
+
   CACHE_TTL,
 } from "./cache"
 
@@ -46,176 +43,6 @@ class PolymarketAPI {
       },
       timeout: 30000,
     })
-  }
-
-  /**
-   * Fetch all open and closed positions for a user and calculate winRate
-   */
-  async getAllPositions(userId: string, timePeriod?: string, maxPages?: number): Promise<{ openPositions: Position[]; closedPositions: ClosedPosition[]; winRate: number }> {
-    let openPositions: Position[] = []
-    let closedPositions: ClosedPosition[] = []
-    try {
-      openPositions = await this.getOpenPositions({ user: userId })
-    } catch (e) {
-      console.error(`Error fetching open positions for user ${userId}:`, e)
-    }
-    try {
-      closedPositions = await this.getClosedPositions({ user: userId, sortBy: "TIMESTAMP" }, timePeriod, maxPages)
-    } catch (e) {
-      console.error(`Error fetching closed positions for user ${userId}:`, e)
-    }
-
-    let winRate = 0
-    if (closedPositions.length > 0) {
-      const wins = closedPositions.filter((pos: any) => (typeof pos.realizedPnl === 'number' ? pos.realizedPnl : (pos.realizedPnl ? parseFloat(pos.realizedPnl) : 0)) > 0).length
-      winRate = (wins / closedPositions.length) * 100
-    }
-    return { openPositions, closedPositions, winRate }
-  }
-
-  /**
-   * Fetch leaderboard data
-   * @param filters - Query parameters for filtering leaderboard
-   * @param maxPages - Maximum number of pages to fetch
-   * @param offset - Offset for pagination
-   * @returns Array of leaderboard entries
-   */
-  async getLeaderboard(filters?: LeaderboardFilters, maxPages: number = 1, offset: number = 0): Promise<PolymarketUser[]> {
-    const cacheKey = getLeaderboardCacheKey(filters, maxPages, offset)
-    return getOrSetCached(cacheKey, async () => {
-      try {
-        // If user or userName is specified, this is a single user lookup - don't paginate
-        const isSingleUserLookup = !!(filters?.user || filters?.userName)
-
-        const queryParams: Record<string, any> = {
-          category: filters?.category ?? 'OVERALL',
-          timePeriod: filters?.timePeriod ?? 'ALL',
-          orderBy: filters?.orderBy ?? 'PNL',
-          limit: isSingleUserLookup ? (1) : 20,
-        }
-
-        if (filters?.user) {
-          queryParams.user = filters.user
-        }
-        if (filters?.userName) {
-          queryParams.userName = filters.userName
-        }
-
-        // For single user lookups, just fetch one page
-        if (isSingleUserLookup) {
-          console.log('Fetching single user with params:', queryParams)
-
-          // https://docs.polymarket.com/api-reference/core/get-trader-leaderboard-rankings
-          const response = await this.dataClient.get<LeaderboardEntry[]>('/v1/leaderboard', {
-            params: queryParams,
-          })
-
-          const entries = Array.isArray(response.data) ? response.data : []
-          console.log(`✅ Single user lookup: ${entries.length} users found`)
-
-          if (entries.length === 0) {
-            return []
-          }
-
-          const user = entries[0]
-          const userId = user.proxyWallet;
-          const openPositions = await this.getOpenPositions({ user: userId })
-          const tradedData = await this.getUserTradedMarkets(userId)
-
-          const winRate = 0
-          const { vol, userName, ...rest } = user;
-
-          return [{
-            ...rest,
-            id: userId,
-            username: userName,
-            volume: vol,
-            activePositions: openPositions,
-            marketsTraded: tradedData.traded,
-            winRate,
-            createdAt: new Date().toISOString(), // Default timestamp for leaderboard users
-            updatedAt: new Date().toISOString(), // Default timestamp for leaderboard users
-          }]
-        }
-
-        // For leaderboard (multiple users), paginate to get specified number of pages
-        const allLeaderboardEntries: LeaderboardEntry[] = []
-        let currentOffset = offset
-
-        for (let page = 0; page < maxPages; page++) {
-          const params = { ...queryParams, offset: currentOffset }
-
-          console.log(`Fetching leaderboard page ${page + 1}/${maxPages} with params:`, params)
-
-          const response = await this.dataClient.get<LeaderboardEntry[]>('/v1/leaderboard', {
-            params,
-          })
-
-          const entries = Array.isArray(response.data) ? response.data : []
-          console.log(`✅ Leaderboard page ${page + 1}: ${entries.length} traders fetched`)
-
-          allLeaderboardEntries.push(...entries)
-
-          // If we got less than 20 entries, we've reached the end
-          if (entries.length < 20) {
-            break
-          }
-
-          currentOffset += 20
-        }
-
-        console.log(`Total leaderboard entries fetched: ${allLeaderboardEntries.length}`)
-
-        const leaderboardUsersWithPositions: PolymarketUser[] = await Promise.all(
-          allLeaderboardEntries.map(async (user: any) => {
-            const userId = user.proxyWallet;
-            const openPositions = await this.getOpenPositions({ user: userId })
-            const tradedData = await this.getUserTradedMarkets(userId)
-            const winRate = 0
-            const { vol, userName, ...rest } = user;
-
-            console.log(`${userName}/${userId} openPositions: ${openPositions.length} tradedMarkets: ${tradedData.traded}`)
-
-            return {
-              ...rest,
-              id: userId,
-              username: userName,
-              volume: vol,
-              activePositions: openPositions,
-              marketsTraded: tradedData.traded,
-              winRate,
-              createdAt: new Date().toISOString(), // Default timestamp for leaderboard users
-              updatedAt: new Date().toISOString(), // Default timestamp for leaderboard users
-            }
-          })
-        )
-
-        return leaderboardUsersWithPositions
-      } catch (error: any) {
-        console.error('Error fetching leaderboard:', {
-          message: error.message,
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-        })
-        return []
-      }
-    }, CACHE_TTL.LEADERBOARD)
-  }
-
-  /**
-   * Fetch a single user by ID
-   * @param userId - User wallet address
-   * @returns User data or null if not found
-   */
-  async getUser(userId: string): Promise<PolymarketUser | null> {
-    try {
-      const users = await this.getLeaderboard({ user: userId, limit: 1 })
-      return users.length > 0 ? users[0] : null
-    } catch (error: any) {
-      console.error(`Error fetching user ${userId}:`, error.message)
-      return null
-    }
   }
 
   /**

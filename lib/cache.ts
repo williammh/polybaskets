@@ -69,12 +69,11 @@ if (typeof setInterval !== 'undefined') {
 // Cache TTLs (milliseconds)
 export const CACHE_TTL = {
   USER_DATA: 10 * 60 * 1000,
-  LEADERBOARD: 10 * 60 * 1000,
   EVENT_DATA: 5 * 60 * 1000,
   POSITIONS: 2 * 60 * 1000,
 }
 
-// Cache key generators (ported from redis.ts)
+// Cache key generators
 export function getUserCacheKey(userId: string): string {
   return `user:${userId}`
 }
@@ -97,9 +96,3 @@ export function getMarketCacheKey(slug: string, includeTag?: boolean): string {
   return `market:${slug}:tag:${includeTag ?? false}`
 }
 
-export function getLeaderboardCacheKey(filters?: any, maxPages?: number, offset?: number): string {
-  const sortedParams = filters
-    ? Object.keys(filters).sort().map(k => `${k}=${filters[k]}`).join('&')
-    : ''
-  return `leaderboard:${sortedParams}:pages:${maxPages}:offset:${offset}`
-}

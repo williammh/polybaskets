@@ -46,13 +46,10 @@ components/
 lib/
 ├── nba.ts                            # NBA market detection & filtering
 ├── polymarket.ts                     # Polymarket API client
-├── cache.ts                          # Redis caching layer
 └── types/polymarket.ts               # TypeScript types
 ```
 
 ## Getting started
-
-**Prerequisites:** Node.js 18+, a Redis instance (local or [Upstash](https://upstash.com))
 
 ```bash
 npm install
@@ -61,19 +58,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Start Redis locally if needed:
-```bash
-docker run -d -p 6379:6379 redis:alpine
-```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Environment variables
-
-```env
-# Required
-REDIS_URL=redis://localhost:6379
-```
 
 ## Commands
 
