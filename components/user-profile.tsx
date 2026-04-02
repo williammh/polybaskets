@@ -571,7 +571,7 @@ export function UserProfile({ userId }: UserProfileProps) {
               <TooltipProvider delayDuration={200}>
                 <Table className="table-fixed w-full min-w-[700px]">
                   <colgroup>
-                    <col />
+                    <col style={{ minWidth: '240px' }} />
                     <col className="w-[90px]" />
                     <col className="w-[60px]" />
                     <col className="w-[65px]" />
@@ -585,7 +585,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                     <TableRow>
                       {tab === 'all' ? (
                         <>
-                          <Th field="title" label="Market" tip="title" />
+                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
                           <Th field="outcome" label="Outcome" tip="outcome" />
                           <Th field="qty" label="Qty" tip="totalBought or size" className="text-right" />
                           <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
@@ -597,7 +597,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                         </>
                       ) : tab === 'closed' ? (
                         <>
-                          <Th field="title" label="Market" tip="title" />
+                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
                           <Th field="outcome" label="Outcome" tip="outcome" />
                           <Th field="totalBought" label="Qty" tip="totalBought" className="text-right" />
                           <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
@@ -609,7 +609,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                         </>
                       ) : (
                         <>
-                          <Th field="title" label="Market" tip="title" />
+                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
                           <Th field="outcome" label="Outcome" tip="outcome" />
                           <Th field="size" label="Qty" tip="size" className="text-right" />
                           <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
