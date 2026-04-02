@@ -115,10 +115,10 @@ test.describe('Profile stats', () => {
   test('displays stat cards with mocked profile data', async ({ page }) => {
     await gotoWithProfile(page);
     await expect(page.getByText('NBA Predictions')).toBeVisible();
-    await expect(page.getByText('Total NBA Win %')).toBeVisible();
-    await expect(page.getByText('Total NBA Cost')).toBeVisible();
-    await expect(page.getByText('Total NBA P/L')).toBeVisible();
-    await expect(page.getByText('Total NBA Value')).toBeVisible();
+    await expect(page.getByText('NBA Win %')).toBeVisible();
+    await expect(page.getByText('NBA Cost')).toBeVisible();
+    await expect(page.getByText('NBA P/L')).toBeVisible();
+    await expect(page.getByText('NBA Value')).toBeVisible();
   });
 
   test('stat card labels have tooltip indicators', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('Positions table tab switching', () => {
 
   test('switches to active positions tab', async ({ page }) => {
     await gotoWithProfile(page);
-    await page.getByRole('button', { name: /Active/ }).click();
+    await page.getByRole('tab', { name: /Active/ }).click();
     await expect(page.getByText('Lakers vs. Warriors')).toBeVisible();
   });
 
@@ -148,17 +148,17 @@ test.describe('Positions table tab switching', () => {
     // Sort by title
     await page.getByText('Market').first().click();
     // Switch to active
-    await page.getByRole('button', { name: /Active/ }).click();
+    await page.getByRole('tab', { name: /Active/ }).click();
     await expect(page.getByText('Lakers vs. Warriors')).toBeVisible();
     // Switch back
-    await page.getByRole('button', { name: /Closed/ }).click();
+    await page.getByRole('tab', { name: /Closed/ }).click();
     await expect(page.getByText('NBA Finals Game 7')).toBeVisible();
   });
 
   test('tab shows position counts', async ({ page }) => {
     await gotoWithProfile(page);
-    await expect(page.getByRole('button', { name: /Closed/ })).toContainText('2');
-    await expect(page.getByRole('button', { name: /Active/ })).toContainText('1');
+    await expect(page.getByRole('tab', { name: /Closed/ })).toContainText('2');
+    await expect(page.getByRole('tab', { name: /Active/ })).toContainText('1');
   });
 });
 
@@ -225,9 +225,9 @@ async function gotoWithBetTypeProfile(page: any) {
 test.describe('Bet type filter checkboxes', () => {
   test('all three checkboxes are checked by default', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await expect(page.getByLabel('Moneyline')).toBeChecked();
-    await expect(page.getByLabel('Over/Under')).toBeChecked();
-    await expect(page.getByLabel('Spread')).toBeChecked();
+    await expect(page.getByLabel('Moneyline').first()).toBeChecked();
+    await expect(page.getByLabel('Over/Under').first()).toBeChecked();
+    await expect(page.getByLabel('Spread').first()).toBeChecked();
   });
 
   test('all positions visible when all checkboxes checked', async ({ page }) => {
@@ -239,7 +239,7 @@ test.describe('Bet type filter checkboxes', () => {
 
   test('unchecking Over/Under hides O/U positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Over/Under').click();
+    await page.getByLabel('Over/Under').first().click();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).not.toBeVisible();
     await expect(page.getByText('Lakers vs. Warriors', { exact: true })).toBeVisible();
     await expect(page.getByText('Spread: Lakers -3.5 vs. Warriors')).toBeVisible();
@@ -247,7 +247,7 @@ test.describe('Bet type filter checkboxes', () => {
 
   test('unchecking Spread hides Spread positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Spread').click();
+    await page.getByLabel('Spread').first().click();
     await expect(page.getByText('Spread: Lakers -3.5 vs. Warriors')).not.toBeVisible();
     await expect(page.getByText('Lakers vs. Warriors', { exact: true })).toBeVisible();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).toBeVisible();
@@ -255,7 +255,7 @@ test.describe('Bet type filter checkboxes', () => {
 
   test('unchecking Moneyline hides moneyline positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Moneyline').click();
+    await page.getByLabel('Moneyline').first().click();
     // The plain moneyline title should be gone, but O/U and Spread remain
     await expect(page.getByText('Lakers vs. Warriors', { exact: true })).not.toBeVisible();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).toBeVisible();
@@ -264,43 +264,43 @@ test.describe('Bet type filter checkboxes', () => {
 
   test('checking only Over/Under shows only O/U positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Moneyline').click();
-    await page.getByLabel('Spread').click();
+    await page.getByLabel('Moneyline').first().click();
+    await page.getByLabel('Spread').first().click();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).toBeVisible();
     await expect(page.getByText('Spread: Lakers -3.5 vs. Warriors')).not.toBeVisible();
   });
 
   test('checking only Spread shows only spread positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Moneyline').click();
-    await page.getByLabel('Over/Under').click();
+    await page.getByLabel('Moneyline').first().click();
+    await page.getByLabel('Over/Under').first().click();
     await expect(page.getByText('Spread: Lakers -3.5 vs. Warriors')).toBeVisible();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).not.toBeVisible();
   });
 
   test('rechecking a checkbox restores its positions', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
-    await page.getByLabel('Over/Under').click();
+    await page.getByLabel('Over/Under').first().click();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).not.toBeVisible();
-    await page.getByLabel('Over/Under').click();
+    await page.getByLabel('Over/Under').first().click();
     await expect(page.getByText('Lakers vs. Warriors: O/U 224.5')).toBeVisible();
   });
 
   test('tab counts update when a checkbox is unchecked', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
     // All 3 closed, 0 open → All=3, Closed=3, Active=0
-    await expect(page.getByRole('button', { name: /All/ })).toContainText('3');
-    await page.getByLabel('Over/Under').click();
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('3');
+    await page.getByLabel('Over/Under').first().click();
     // O/U removed → 2 remain
-    await expect(page.getByRole('button', { name: /All/ })).toContainText('2');
-    await expect(page.getByRole('button', { name: /Closed/ })).toContainText('2');
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('2');
+    await expect(page.getByRole('tab', { name: /Closed/ })).toContainText('2');
   });
 
   test('stat card counts update when a checkbox is unchecked', async ({ page }) => {
     await gotoWithBetTypeProfile(page);
     // Uncheck all but one type to get a lower count
-    await page.getByLabel('Moneyline').click();
-    await page.getByLabel('Spread').click();
+    await page.getByLabel('Moneyline').first().click();
+    await page.getByLabel('Spread').first().click();
     // Only 1 O/U position remains → NBA Predictions should show 1
     const predictionsCard = page.locator('p.font-semibold').filter({ hasText: /^1$/ });
     await expect(predictionsCard).toBeVisible();
@@ -328,7 +328,7 @@ const MOCK_PROFILE_WITH_DATES = {
       avgPrice: 0.6,
       totalBought: 100,
       realizedPnl: 40,
-      endDate: _iso(_yr, _mo, 20), // day 20 — after filter date (day 15) → kept
+      endDate: _iso(_yr, _mo, 20), // day 20 of current month
       tags: [{ slug: 'nba' }],
     },
     {
@@ -338,7 +338,7 @@ const MOCK_PROFILE_WITH_DATES = {
       avgPrice: 0.5,
       totalBought: 50,
       realizedPnl: 10,
-      endDate: _iso(_yr, _mo, 5), // day 5 — before filter date (day 15) → filtered
+      endDate: _iso(_yr, _mo, 5), // day 5 of current month
       tags: [{ slug: 'nba' }],
     },
     {
@@ -348,7 +348,7 @@ const MOCK_PROFILE_WITH_DATES = {
       avgPrice: 0.52,
       totalBought: 80,
       realizedPnl: -5,
-      endDate: _iso(_lastMoYear, _lastMo, 5), // last month — before filter date → filtered
+      endDate: _iso(_lastMoYear, _lastMo, 5), // day 5 of last month
       tags: [{ slug: 'nba' }],
     },
   ],
@@ -383,10 +383,10 @@ async function selectDay15(page: any) {
   await popover.locator('button').filter({ hasText: /^15$/ }).click();
 }
 
-test.describe('Max close date filter', () => {
+test.describe('Min close date filter', () => {
   test('date picker trigger is visible with placeholder text', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await expect(page.getByRole('button', { name: /Max Close Date/ })).toBeVisible();
+    await expect(page.getByTestId('min-close-date-trigger').first()).toBeVisible();
   });
 
   test('all positions visible before filter is set', async ({ page }) => {
@@ -398,41 +398,41 @@ test.describe('Max close date filter', () => {
 
   test('clicking trigger opens the calendar', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await expect(page.getByRole('grid')).toBeVisible();
   });
 
   test('selecting day 15 filters out positions closing before that date', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
     await expect(page.getByText('Near Future Game')).toBeVisible();      // day 20 ≥ day 15 → kept
     await expect(page.getByText('Early Month Game')).not.toBeVisible(); // day 5 < day 15 → filtered
-    await expect(page.getByText('Last Month Game')).not.toBeVisible();  // last month → filtered
+    await expect(page.getByText('Last Month Game')).not.toBeVisible();  // last month < day 15 → filtered
   });
 
   test('trigger button shows selected date after selection', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
-    // Popover auto-closes on selection; trigger now shows the formatted date
-    await expect(page.getByRole('button', { name: /Max Close Date/ })).not.toBeVisible();
+    // Popover auto-closes on selection; trigger now shows the formatted date (not placeholder)
+    await expect(page.getByTestId('min-close-date-trigger').first()).not.toContainText('Min Close Date');
   });
 
   test('clear button appears after selecting a date', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await expect(page.getByRole('button', { name: 'Clear' })).not.toBeVisible();
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await expect(page.getByTestId('min-close-date-clear').first()).not.toBeVisible();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
-    await expect(page.getByRole('button', { name: 'Clear' })).toBeVisible();
+    await expect(page.getByTestId('min-close-date-clear').first()).toBeVisible();
   });
 
   test('clicking clear removes the filter and shows all positions', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
     await expect(page.getByText('Last Month Game')).not.toBeVisible();
-    await page.getByRole('button', { name: 'Clear' }).click();
+    await page.getByTestId('min-close-date-clear').first().click();
     await expect(page.getByText('Near Future Game')).toBeVisible();
     await expect(page.getByText('Early Month Game')).toBeVisible();
     await expect(page.getByText('Last Month Game')).toBeVisible();
@@ -440,16 +440,16 @@ test.describe('Max close date filter', () => {
 
   test('tab counts update when date filter is applied', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await expect(page.getByRole('button', { name: /All/ })).toContainText('3');
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('3');
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
-    await expect(page.getByRole('button', { name: /All/ })).toContainText('1');
-    await expect(page.getByRole('button', { name: /Closed/ })).toContainText('1');
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('1');
+    await expect(page.getByRole('tab', { name: /Closed/ })).toContainText('1');
   });
 
   test('stat cards update when date filter is applied', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
     // Only 1 position remains — NBA Predictions stat card shows "1"
     const predictionsCard = page.locator('p.font-semibold').filter({ hasText: /^1$/ });
@@ -458,18 +458,18 @@ test.describe('Max close date filter', () => {
 
   test('switching tabs resets the date filter', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     await selectDay15(page);
     await expect(page.getByText('Last Month Game')).not.toBeVisible();
-    // Switch tab — handleTabChange resets all filters including maxCloseDate
-    await page.getByRole('button', { name: /Closed/ }).click();
+    // Switch tab — handleTabChange resets all filters including minCloseDate
+    await page.getByRole('tab', { name: /Closed/ }).click();
     await expect(page.getByText('Last Month Game')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Max Close Date/ })).toBeVisible();
+    await expect(page.getByTestId('min-close-date-trigger').first()).toBeVisible();
   });
 
   test('opening and closing calendar without selecting a date does not apply a date filter', async ({ page }) => {
     await gotoWithDateProfile(page);
-    await page.getByRole('button', { name: /Max Close Date/ }).click();
+    await page.getByTestId('min-close-date-trigger').first().click();
     const popover = page.locator('[data-radix-popper-content-wrapper]');
     await expect(popover).toBeVisible();
     // Close calendar without selecting a day
@@ -478,7 +478,106 @@ test.describe('Max close date filter', () => {
     await expect(page.getByText('Near Future Game')).toBeVisible();
     await expect(page.getByText('Early Month Game')).toBeVisible();
     await expect(page.getByText('Last Month Game')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Max Close Date/ })).toBeVisible();
+    await expect(page.getByTestId('min-close-date-trigger').first()).toContainText('Min Close Date');
+  });
+});
+
+test.describe('Max close date filter', () => {
+  test('date picker trigger is visible with placeholder text', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await expect(page.getByTestId('max-close-date-trigger').first()).toBeVisible();
+  });
+
+  test('all positions visible before filter is set', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await expect(page.getByText('Near Future Game')).toBeVisible();
+    await expect(page.getByText('Early Month Game')).toBeVisible();
+    await expect(page.getByText('Last Month Game')).toBeVisible();
+  });
+
+  test('clicking trigger opens the calendar', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await expect(page.getByRole('grid')).toBeVisible();
+  });
+
+  test('selecting day 15 filters out positions closing after that date', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    await expect(page.getByText('Near Future Game')).not.toBeVisible(); // day 20 > day 15 → filtered
+    await expect(page.getByText('Early Month Game')).toBeVisible();     // day 5 ≤ day 15 → kept
+    await expect(page.getByText('Last Month Game')).toBeVisible();      // last month ≤ day 15 → kept
+  });
+
+  test('trigger button shows selected date after selection', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    // Popover auto-closes on selection; trigger now shows the formatted date (not placeholder)
+    await expect(page.getByTestId('max-close-date-trigger').first()).not.toContainText('Max Close Date');
+  });
+
+  test('clear button appears after selecting a date', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await expect(page.getByTestId('max-close-date-clear').first()).not.toBeVisible();
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    await expect(page.getByTestId('max-close-date-clear').first()).toBeVisible();
+  });
+
+  test('clicking clear removes the filter and shows all positions', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    await expect(page.getByText('Near Future Game')).not.toBeVisible();
+    await page.getByTestId('max-close-date-clear').first().click();
+    await expect(page.getByText('Near Future Game')).toBeVisible();
+    await expect(page.getByText('Early Month Game')).toBeVisible();
+    await expect(page.getByText('Last Month Game')).toBeVisible();
+  });
+
+  test('tab counts update when date filter is applied', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('3');
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    await expect(page.getByRole('tab', { name: /All/ })).toContainText('2');
+    await expect(page.getByRole('tab', { name: /Closed/ })).toContainText('2');
+  });
+
+  test('stat cards update when date filter is applied', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    // 2 positions remain — NBA Predictions stat card shows "2"
+    const predictionsCard = page.locator('p.font-semibold').filter({ hasText: /^2$/ });
+    await expect(predictionsCard).toBeVisible();
+  });
+
+  test('switching tabs resets the date filter', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    await selectDay15(page);
+    await expect(page.getByText('Near Future Game')).not.toBeVisible();
+    // Switch tab — handleTabChange resets all filters including maxCloseDate
+    await page.getByRole('tab', { name: /Closed/ }).click();
+    await expect(page.getByText('Near Future Game')).toBeVisible();
+    await expect(page.getByTestId('max-close-date-trigger').first()).toBeVisible();
+  });
+
+  test('opening and closing calendar without selecting a date does not apply a date filter', async ({ page }) => {
+    await gotoWithDateProfile(page);
+    await page.getByTestId('max-close-date-trigger').first().click();
+    const popover = page.locator('[data-radix-popper-content-wrapper]');
+    await expect(popover).toBeVisible();
+    // Close calendar without selecting a day
+    await page.keyboard.press('Escape');
+    // No date was selected — all positions still visible, trigger still shows placeholder
+    await expect(page.getByText('Near Future Game')).toBeVisible();
+    await expect(page.getByText('Early Month Game')).toBeVisible();
+    await expect(page.getByText('Last Month Game')).toBeVisible();
+    await expect(page.getByTestId('max-close-date-trigger').first()).toContainText('Max Close Date');
   });
 });
 

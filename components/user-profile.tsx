@@ -6,14 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { UserSkeleton } from "@/components/user-skeleton"
-import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, Search, CalendarIcon } from "lucide-react"
+import { ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, Eraser } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface UserProfileProps {
   userId: string
@@ -116,57 +116,23 @@ const AllPositionRow = memo(function AllPositionRow({ row }: { row: CombinedRow 
   )
 })
 
-const ClosedPositionRow = memo(function ClosedPositionRow({ pos }: { pos: ClosedPosition }) {
-  const pnl = n(pos.realizedPnl)
-  return (
-    <TableRow>
-      <TableCell className="truncate" title={pos.title}>{pos.title}</TableCell>
-      <TableCell className="truncate">{pos.outcome}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{n(pos.totalBought).toFixed(1)}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(pos.avgPrice)}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(n(pos.avgPrice) * n(pos.totalBought))}</TableCell>
-      <TableCell className={`text-right font-mono whitespace-nowrap ${pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : ''}`}>
-        {fmtPnl(pnl)}
-      </TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(n(pos.avgPrice) * n(pos.totalBought) + n(pos.realizedPnl))}</TableCell>
-      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{fmtDate(pos.endDate)}</TableCell>
-      <TableCell />
-    </TableRow>
-  )
-})
-
-const OpenPositionRow = memo(function OpenPositionRow({ pos }: { pos: Position }) {
-  const pnl = n(pos.cashPnl)
-  return (
-    <TableRow>
-      <TableCell className="truncate" title={pos.title}>{pos.title}</TableCell>
-      <TableCell className="truncate">{pos.outcome}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{n(pos.size).toFixed(1)}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(pos.avgPrice)}</TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(n(pos.avgPrice) * n(pos.size))}</TableCell>
-      <TableCell className={`text-right font-mono whitespace-nowrap ${pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : ''}`}>
-        {fmtPnl(pnl)}
-      </TableCell>
-      <TableCell className="text-right font-mono whitespace-nowrap">{fmtCurrency(pos.currentValue)}</TableCell>
-      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{fmtDate(pos.endDate)}</TableCell>
-      <TableCell />
-    </TableRow>
-  )
-})
 
 export function UserProfile({ userId }: UserProfileProps) {
   const [profile, setProfile] = useState<NBAUserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [tab, setTab] = useState<'all' | 'closed' | 'open'>('all')
-  const [searchFilter, setSearchFilter] = useState("")
   const [page, setPage] = useState(1)
   const PER_PAGE = 50
 
   type BetType = 'moneyline' | 'overunder' | 'spread'
   const ALL_BET_TYPES: BetType[] = ['moneyline', 'overunder', 'spread']
   const [betTypeFilter, setBetTypeFilter] = useState<Set<BetType>>(new Set(ALL_BET_TYPES))
+  const [minCloseDate, setMinCloseDate] = useState("")
+  const [minCalendarOpen, setMinCalendarOpen] = useState(false)
+  const [minCalendarOpenSm, setMinCalendarOpenSm] = useState(false)
   const [maxCloseDate, setMaxCloseDate] = useState("")
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarOpenSm, setCalendarOpenSm] = useState(false)
 
   const [sortAll, setSortAll] = useState<SortState>({ field: 'pnl', dir: 'DESC' })
   const [sortClosed, setSortClosed] = useState<SortState>({ field: 'realizedPnl', dir: 'DESC' })
@@ -212,11 +178,16 @@ export function UserProfile({ userId }: UserProfileProps) {
   // Reset sort defaults when switching tabs
   const handleTabChange = useCallback((next: 'all' | 'closed' | 'open') => {
     setTab(next)
-    setSearchFilter("")
     setBetTypeFilter(new Set(ALL_BET_TYPES))
+    setMinCloseDate("")
     setMaxCloseDate("")
     setPage(1)
   }, [])
+
+  const minMs = useMemo(() => {
+    if (!minCloseDate) return null
+    return new Date(minCloseDate + 'T00:00:00').getTime()
+  }, [minCloseDate])
 
   // Compute maxMs once per maxCloseDate change instead of per-position
   const maxMs = useMemo(() => {
@@ -225,12 +196,14 @@ export function UserProfile({ userId }: UserProfileProps) {
   }, [maxCloseDate])
 
   const matchesDateFilter = useCallback((endDate: string | number | undefined): boolean => {
-    if (maxMs === null) return true
+    if (minMs === null && maxMs === null) return true
     if (!endDate) return true
     const endMs = typeof endDate === 'number' ? endDate * 1000 : Date.parse(String(endDate))
     if (isNaN(endMs)) return true
-    return endMs >= maxMs
-  }, [maxMs])
+    if (minMs !== null && endMs < minMs) return false
+    if (maxMs !== null && endMs > maxMs) return false
+    return true
+  }, [minMs, maxMs])
 
   const matchesBetType = useCallback((title: string) => {
     if (betTypeFilter.size === ALL_BET_TYPES.length) return true
@@ -269,11 +242,8 @@ export function UserProfile({ userId }: UserProfileProps) {
   }, [allRows, matchesBetType, matchesDateFilter])
 
   const filteredRows = useMemo(() => {
-    const q = searchFilter.trim().toLowerCase()
     if (tab === 'all') {
-      const all = allRows.all
-
-      const filtered = all.filter(r => (!q || r.title.toLowerCase().includes(q)) && matchesBetType(r.title) && matchesDateFilter(r.endDate))
+      const filtered = allRows.all.filter(r => matchesBetType(r.title) && matchesDateFilter(r.endDate))
       return [...filtered].sort((a, b) => {
         const av = (a as any)[sort.field] ?? null
         const bv = (b as any)[sort.field] ?? null
@@ -284,16 +254,14 @@ export function UserProfile({ userId }: UserProfileProps) {
         return sort.dir === 'ASC' ? cmp : -cmp
       })
     }
-    const positions = tab === 'closed'
-      ? allRows.closed
-      : allRows.open
-    const filtered = (positions as CombinedRow[]).filter((p) => (!q || p.title.toLowerCase().includes(q)) && matchesBetType(p.title) && matchesDateFilter(p.endDate))
+    const positions = tab === 'closed' ? allRows.closed : allRows.open
+    const filtered = (positions as CombinedRow[]).filter(p => matchesBetType(p.title) && matchesDateFilter(p.endDate))
     return [...filtered].sort((a: any, b: any) => {
       const cmp = compareValues(a, b, sort.field)
       return sort.dir === 'ASC' ? cmp : -cmp
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, tab, sort, searchFilter, betTypeFilter, maxCloseDate])
+  }, [allRows, tab, sort, betTypeFilter, minCloseDate, maxCloseDate])
 
   const paginated = useMemo(() => {
     const start = (page - 1) * PER_PAGE
@@ -302,7 +270,7 @@ export function UserProfile({ userId }: UserProfileProps) {
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PER_PAGE))
 
-  useEffect(() => { setPage(1) }, [searchFilter, betTypeFilter, maxCloseDate])
+  useEffect(() => { setPage(1) }, [betTypeFilter, minCloseDate, maxCloseDate])
 
   if (isLoading || !profile) {
     return (
@@ -314,10 +282,9 @@ export function UserProfile({ userId }: UserProfileProps) {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 overflow-hidden">
-      <div className="flex flex-col gap-4 sm:gap-6">
 
         {/* User Identity */}
-        <div className="flex items-start gap-4 sm:gap-6">
+        <div className="flex items-start gap-4 sm:gap-6 mb-6">
           <Avatar className="h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0">
             <AvatarImage src={profile.profileImage} className="object-cover" />
             <AvatarFallback className="text-lg">
@@ -349,125 +316,258 @@ export function UserProfile({ userId }: UserProfileProps) {
 
         {/* Stats */}
         <TooltipProvider delayDuration={200}>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 mb-6">
             <StatCard label={<StatLabel text="NBA Predictions" tip="Includes open and closed positions" />} value={filteredStats.count.toLocaleString()} highlight />
-            <StatCard label={<StatLabel text="Total NBA Win %" tip="Positions with positive P/L, across open and closed" />} value={`${filteredStats.winRate.toFixed(1)}%`} highlight />
-            <StatCard label={<StatLabel text="Total NBA Cost" tip="Total amount spent, across open and closed positions" />} value={fmtCurrency(filteredStats.cost)} highlight />
+            <StatCard label={<StatLabel text="NBA Win %" tip="Positions with positive P/L, across open and closed" />} value={`${filteredStats.winRate.toFixed(1)}%`} highlight />
+            <StatCard label={<StatLabel text="NBA Cost" tip="Total amount spent, across open and closed positions" />} value={fmtCurrency(filteredStats.cost)} highlight />
             <StatCard
-              label={<StatLabel text="Total NBA P/L" tip="Realized P/L (closed) + unrealized P/L (open)" />}
+              label={<StatLabel text="NBA P/L" tip="Realized P/L (closed) + unrealized P/L (open)" />}
               value={fmtPnl(filteredStats.pnl)}
               highlight
               className={filteredStats.pnl > 0 ? 'text-green-400' : filteredStats.pnl < 0 ? 'text-red-400' : ''}
             />
-            <StatCard label={<StatLabel text="Total NBA Value" tip="Cost + P/L across open and closed positions" />} value={fmtCurrency(filteredStats.value)} highlight />
+            <StatCard label={<StatLabel text="NBA Value" tip="Cost + P/L across open and closed positions" />} value={fmtCurrency(filteredStats.value)} highlight />
           </div>
         </TooltipProvider>
 
-        {/* Bet Type Filter + Date Filter */}
-        <div className="flex items-center gap-4 flex-wrap">
-          {(['moneyline', 'overunder', 'spread'] as const).map((type) => {
-            const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread' }
-            return (
-              <div key={type} className="flex items-center gap-1.5">
-                <Checkbox
-                  id={`bet-type-${type}`}
-                  checked={betTypeFilter.has(type)}
-                  onCheckedChange={() => {
-                    setBetTypeFilter(prev => {
-                      const next = new Set(prev)
-                      next.has(type) ? next.delete(type) : next.add(type)
-                      return next
-                    })
-                    setPage(1)
-                  }}
-                />
-                <Label htmlFor={`bet-type-${type}`} className="cursor-pointer text-sm font-normal">
-                  {labels[type]}
-                </Label>
-              </div>
-            )
-          })}
-          <div className="flex items-center gap-1.5 ml-auto">
-            {maxCloseDate && (
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => { setMaxCloseDate(""); setPage(1) }}>
-                Clear
-              </Button>
-            )}
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-44 text-sm font-normal justify-start">
-                  <CalendarIcon className="h-3.5 w-3.5 shrink-0 mr-1.5" />
-                  {maxCloseDate
-                    ? new Date(maxCloseDate + 'T12:00:00').toLocaleDateString()
-                    : <span className="text-muted-foreground">Max Close Date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={maxCloseDate ? new Date(maxCloseDate + 'T12:00:00') : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      const y = date.getFullYear()
-                      const m = String(date.getMonth() + 1).padStart(2, '0')
-                      const d = String(date.getDate()).padStart(2, '0')
-                      setMaxCloseDate(`${y}-${m}-${d}`)
-                    } else {
-                      setMaxCloseDate("")
-                    }
-                    setPage(1)
-                    setCalendarOpen(false)
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+        {/* Filters + Tabs */}
+        <div className="flex flex-col gap-2">
 
-        {/* Tab + Search row */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex rounded-md border overflow-hidden text-sm">
-            <button
-              className={`px-3 py-1.5 transition-colors ${tab === 'all' ? 'bg-foreground text-background' : 'hover:bg-muted'}`}
-              onClick={() => handleTabChange('all')}
-            >
-              All
-              <span className="ml-1.5 text-xs opacity-60">({filteredStats.count})</span>
-            </button>
-            <button
-              className={`px-3 py-1.5 transition-colors border-l ${tab === 'closed' ? 'bg-foreground text-background' : 'hover:bg-muted'}`}
-              onClick={() => handleTabChange('closed')}
-            >
-              Closed
-              <span className="ml-1.5 text-xs opacity-60">({filteredStats.closedCount})</span>
-            </button>
-            <button
-              className={`px-3 py-1.5 transition-colors border-l ${tab === 'open' ? 'bg-foreground text-background' : 'hover:bg-muted'}`}
-              onClick={() => handleTabChange('open')}
-            >
-              Active
-              <span className="ml-1.5 text-xs opacity-60">({filteredStats.openCount})</span>
-            </button>
+          {/* Wide layout: row 1 = checkboxes + date pickers, row 2 = tabs */}
+          <div className="hidden md:flex flex-col gap-2">
+            {/* Row 1: checkboxes + date pickers */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+              <div className="flex items-center gap-3 h-8">
+                {(['moneyline', 'overunder', 'spread'] as const).map((type) => {
+                  const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread' }
+                  return (
+                    <div key={type} className="flex items-center gap-1.5">
+                      <Checkbox
+                        id={`bet-type-${type}`}
+                        checked={betTypeFilter.has(type)}
+                        onCheckedChange={() => {
+                          setBetTypeFilter(prev => {
+                            const next = new Set(prev)
+                            next.has(type) ? next.delete(type) : next.add(type)
+                            return next
+                          })
+                          setPage(1)
+                        }}
+                      />
+                      <Label htmlFor={`bet-type-${type}`} className="cursor-pointer text-sm font-normal">
+                        {labels[type]}
+                      </Label>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-1 lg:ml-auto h-8 w-full lg:w-auto">
+                <div className="relative flex-1 lg:flex-none max-w-44">
+                  <Popover open={minCalendarOpen} onOpenChange={setMinCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button data-testid="min-close-date-trigger" variant="outline" size="sm" className="h-8 w-full lg:w-44 text-sm font-normal justify-start pr-7">
+                        {minCloseDate
+                          ? new Date(minCloseDate + 'T12:00:00').toLocaleDateString()
+                          : <span className="text-muted-foreground">Min Close Date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={minCloseDate ? new Date(minCloseDate + 'T12:00:00') : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const y = date.getFullYear()
+                            const m = String(date.getMonth() + 1).padStart(2, '0')
+                            const d = String(date.getDate()).padStart(2, '0')
+                            setMinCloseDate(`${y}-${m}-${d}`)
+                          } else {
+                            setMinCloseDate("")
+                          }
+                          setPage(1)
+                          setMinCalendarOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {minCloseDate && (
+                    <button data-testid="min-close-date-clear" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setMinCloseDate(""); setPage(1) }}>
+                      <Eraser className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">to</span>
+                <div className="relative flex-1 lg:flex-none max-w-44">
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button data-testid="max-close-date-trigger" variant="outline" size="sm" className="h-8 w-full lg:w-44 text-sm font-normal justify-start pr-7">
+                        {maxCloseDate
+                          ? new Date(maxCloseDate + 'T12:00:00').toLocaleDateString()
+                          : <span className="text-muted-foreground">Max Close Date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={maxCloseDate ? new Date(maxCloseDate + 'T12:00:00') : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const y = date.getFullYear()
+                            const m = String(date.getMonth() + 1).padStart(2, '0')
+                            const d = String(date.getDate()).padStart(2, '0')
+                            setMaxCloseDate(`${y}-${m}-${d}`)
+                          } else {
+                            setMaxCloseDate("")
+                          }
+                          setPage(1)
+                          setCalendarOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {maxCloseDate && (
+                    <button data-testid="max-close-date-clear" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setMaxCloseDate(""); setPage(1) }}>
+                      <Eraser className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Row 2: tabs */}
+            <div className="flex items-center h-8">
+              <Tabs value={tab} onValueChange={(v) => handleTabChange(v as 'all' | 'closed' | 'open')}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="all" className="text-sm px-3">
+                    All <span className="ml-1.5 text-xs opacity-60">({filteredStats.count})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="closed" className="text-sm px-3">
+                    Closed <span className="ml-1.5 text-xs opacity-60">({filteredStats.closedCount})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="open" className="text-sm px-3">
+                    Active <span className="ml-1.5 text-xs opacity-60">({filteredStats.openCount})</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
-          {searchFilter ? (
-            <span className="text-sm text-muted-foreground">({filteredRows.length})</span>
-          ) : null}
-          <div className="relative flex-1 min-w-[180px] max-w-xs sm:ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Filter by market name..."
-              className="pl-9 h-8 text-sm"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-            />
+
+          {/* Narrow layout: 3 stacked rows */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {/* Row 1: checkboxes */}
+            <div className="flex items-center gap-3 h-8">
+              {(['moneyline', 'overunder', 'spread'] as const).map((type) => {
+                const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread' }
+                return (
+                  <div key={type} className="flex items-center gap-1.5">
+                    <Checkbox
+                      id={`bet-type-${type}-sm`}
+                      checked={betTypeFilter.has(type)}
+                      onCheckedChange={() => {
+                        setBetTypeFilter(prev => {
+                          const next = new Set(prev)
+                          next.has(type) ? next.delete(type) : next.add(type)
+                          return next
+                        })
+                        setPage(1)
+                      }}
+                    />
+                    <Label htmlFor={`bet-type-${type}-sm`} className="cursor-pointer text-sm font-normal">
+                      {labels[type]}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
+            {/* Row 2: date pickers collapsed into one row */}
+            <div className="flex items-center gap-1 h-8">
+              <div className="relative flex-1 min-w-0 max-w-44">
+                <Popover open={minCalendarOpenSm} onOpenChange={setMinCalendarOpenSm}>
+                  <PopoverTrigger asChild>
+                    <Button data-testid="min-close-date-trigger" variant="outline" size="sm" className="h-8 w-full text-xs font-normal justify-start pr-7">
+                      <span className="truncate">{minCloseDate ? new Date(minCloseDate + 'T12:00:00').toLocaleDateString() : <span className="text-muted-foreground">Min Close Date</span>}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={minCloseDate ? new Date(minCloseDate + 'T12:00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const y = date.getFullYear()
+                          const m = String(date.getMonth() + 1).padStart(2, '0')
+                          const d = String(date.getDate()).padStart(2, '0')
+                          setMinCloseDate(`${y}-${m}-${d}`)
+                        } else {
+                          setMinCloseDate("")
+                        }
+                        setPage(1)
+                        setMinCalendarOpenSm(false)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {minCloseDate && (
+                  <button data-testid="min-close-date-clear" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setMinCloseDate(""); setPage(1) }}>
+                    <Eraser className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">to</span>
+              <div className="relative flex-1 min-w-0 max-w-44">
+                <Popover open={calendarOpenSm} onOpenChange={setCalendarOpenSm}>
+                  <PopoverTrigger asChild>
+                    <Button data-testid="max-close-date-trigger" variant="outline" size="sm" className="h-8 w-full text-xs font-normal justify-start pr-7">
+                      <span className="truncate">{maxCloseDate ? new Date(maxCloseDate + 'T12:00:00').toLocaleDateString() : <span className="text-muted-foreground">Max Close Date</span>}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={maxCloseDate ? new Date(maxCloseDate + 'T12:00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const y = date.getFullYear()
+                          const m = String(date.getMonth() + 1).padStart(2, '0')
+                          const d = String(date.getDate()).padStart(2, '0')
+                          setMaxCloseDate(`${y}-${m}-${d}`)
+                        } else {
+                          setMaxCloseDate("")
+                        }
+                        setPage(1)
+                        setCalendarOpenSm(false)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {maxCloseDate && (
+                  <button data-testid="max-close-date-clear" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setMaxCloseDate(""); setPage(1) }}>
+                    <Eraser className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Row 3: tabs */}
+            <Tabs value={tab} onValueChange={(v) => handleTabChange(v as 'all' | 'closed' | 'open')}>
+              <TabsList className="h-8 w-full">
+                <TabsTrigger value="all" className="flex-1 text-sm">
+                  All <span className="ml-1 text-xs opacity-60">({filteredStats.count})</span>
+                </TabsTrigger>
+                <TabsTrigger value="closed" className="flex-1 text-sm">
+                  Closed <span className="ml-1 text-xs opacity-60">({filteredStats.closedCount})</span>
+                </TabsTrigger>
+                <TabsTrigger value="open" className="flex-1 text-sm">
+                  Active <span className="ml-1 text-xs opacity-60">({filteredStats.openCount})</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
+
         </div>
 
         {/* Positions Table */}
         {paginated.length > 0 ? (
           <>
-            <div className="border rounded-md overflow-x-auto">
+            <div className="border rounded-md overflow-x-auto mt-4">
               <TooltipProvider delayDuration={200}>
                 <Table className="table-fixed w-full min-w-[700px]">
                   <colgroup>
@@ -505,7 +605,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                           <Th field="realizedPnl" label="P/L" tip="realizedPnl" className="text-right" />
                           <Th field="value_closed" label="Value" tip="(avgPrice × totalBought) + realizedPnl" className="text-right" />
                           <Th field="endDate" label="Close Date" tip="endDate" />
-                          <TableHead />
+                          <Th field="status" label="Status" tip="Active or Closed" />
                         </>
                       ) : (
                         <>
@@ -517,7 +617,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                           <Th field="cashPnl" label="P/L" tip="cashPnl" className="text-right" />
                           <Th field="currentValue" label="Value" tip="currentValue" className="text-right" />
                           <Th field="endDate" label="Close Date" tip="endDate" />
-                          <TableHead />
+                          <Th field="status" label="Status" tip="Active or Closed" />
                         </>
                       )}
                     </TableRow>
@@ -547,16 +647,13 @@ export function UserProfile({ userId }: UserProfileProps) {
             )}
           </>
         ) : (
-          <div className="h-32 flex items-center justify-center border rounded-md">
+          <div className="h-32 flex items-center justify-center border rounded-md mt-4">
             <p className="text-muted-foreground">
-              {searchFilter
-                ? 'No matching positions'
-                : tab === 'all' ? 'No NBA positions' : tab === 'closed' ? 'No closed NBA positions' : 'No active NBA positions'}
+              {tab === 'all' ? 'No NBA positions' : tab === 'closed' ? 'No closed NBA positions' : 'No active NBA positions'}
             </p>
           </div>
         )}
 
-      </div>
     </div>
   )
 }

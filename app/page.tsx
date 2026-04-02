@@ -2,6 +2,7 @@
 
 import { SearchComponent } from "@/components/search-input"
 import { AdBanner } from "@/components/ad-banner"
+import { AdSidebar } from "@/components/ad-sidebar"
 
 export default function Home() {
   return (
@@ -25,9 +26,7 @@ export default function Home() {
       </p>
 
       {/* Sidebar Ad (desktop only) */}
-      <div className="hidden lg:block fixed right-6 top-1/2 -translate-y-1/2">
-        <AdBanner position="sidebar" />
-      </div>
+      <AdSidebar />
     </div>
   )
 }

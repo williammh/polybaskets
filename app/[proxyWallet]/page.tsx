@@ -2,6 +2,7 @@ import { use } from "react"
 import { SearchComponent } from "@/components/search-input"
 import { UserProfile } from "@/components/user-profile"
 import { AdBanner } from "@/components/ad-banner"
+import { AdSidebar } from "@/components/ad-sidebar"
 
 interface UserPageProps {
   params: Promise<{
@@ -34,9 +35,7 @@ export default function UserPage({ params }: UserPageProps) {
       </div>
 
       {/* Sidebar Ad (desktop only) */}
-      <div className="hidden lg:block fixed right-6 top-1/2 -translate-y-1/2">
-        <AdBanner position="sidebar" />
-      </div>
+      <AdSidebar />
     </div>
   )
 }

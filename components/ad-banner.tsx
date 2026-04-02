@@ -7,7 +7,7 @@ interface AdBannerProps {
 
 const SIZES = {
   header: { width: 728, height: 90 },
-  sidebar: { width: 300, height: 250 },
+  sidebar: { width: 160, height: 600 },
 }
 
 export function AdBanner({ position, className = "" }: AdBannerProps) {
