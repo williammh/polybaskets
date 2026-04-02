@@ -281,7 +281,7 @@ export function UserProfile({ userId }: UserProfileProps) {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 overflow-hidden">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6">
 
         {/* User Identity */}
         <div className="flex items-start gap-4 sm:gap-6 mb-6">
@@ -571,7 +571,7 @@ export function UserProfile({ userId }: UserProfileProps) {
               <TooltipProvider delayDuration={200}>
                 <Table className="table-fixed w-full min-w-[700px]">
                   <colgroup>
-                    <col className="w-[200px]" />
+                    <col />
                     <col className="w-[90px]" />
                     <col className="w-[60px]" />
                     <col className="w-[65px]" />

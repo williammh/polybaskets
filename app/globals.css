@@ -184,18 +184,3 @@ html, body {
 
 
 
-/* Ensure any element using Tailwind overflow utilities reserves the scrollbar gutter
-   so element-level scrollbars don't shift layout when they appear/disappear. */
-.overflow-auto,
-.overflow-scroll,
-.overflow-y-auto,
-.overflow-y-scroll,
-.overflow-x-auto,
-.overflow-x-scroll,
-.scrollbar {
-  scrollbar-gutter: stable;
-}
-
-/* Fallback hint for overlay-scrollbar environments: if you still see no visible
-   scrollbar (Linux/Chrome overlays), tell me which browser/version you use so
-   I can provide a browser-specific workaround. */
