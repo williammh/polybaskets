@@ -152,7 +152,7 @@
 
 /* Reserve scrollbar gutter so layout doesn't shift when scrollbar appears */
 html, body {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
 }
 
 /* WebKit (Chrome, Edge, Safari) */
@@ -193,7 +193,7 @@ html, body {
 .overflow-x-auto,
 .overflow-x-scroll,
 .scrollbar {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
 }
 
 /* Fallback hint for overlay-scrollbar environments: if you still see no visible
