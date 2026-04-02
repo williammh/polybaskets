@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, memo, useCallback } from "react"
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from "react"
 import { NBAUserProfile, ClosedPosition, Position } from "@/lib/types/polymarket"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -154,11 +154,45 @@ export function UserProfile({ userId }: UserProfileProps) {
       : <ArrowDown className="inline-block ml-1 h-3 w-3" />
   }
 
-  const Th = ({ field, label, tip, className }: { field: string; label: string; tip: string; className?: string }) => (
-    <TableHead className={`cursor-pointer whitespace-nowrap ${className ?? ''}`}>
+  const DEFAULT_COL_WIDTHS = [240, 90, 60, 65, 80, 80, 80, 90, 70]
+  const [colWidths, setColWidths] = useState(DEFAULT_COL_WIDTHS)
+  const colWidthsRef = useRef(colWidths)
+  useEffect(() => { colWidthsRef.current = colWidths }, [colWidths])
+
+  const startResize = useCallback((colIndex: number, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startWidth = colWidthsRef.current[colIndex]
+    const onMouseMove = (ev: MouseEvent) => {
+      const newWidth = Math.max(48, startWidth + (ev.clientX - startX))
+      setColWidths(prev => {
+        const next = [...prev]
+        next[colIndex] = newWidth
+        return next
+      })
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [])
+
+  const Th = ({ field, label, tip, className, colIndex }: { field: string; label: string; tip: string; className?: string; colIndex: number }) => (
+    <TableHead className={`relative cursor-pointer whitespace-nowrap select-none ${className ?? ''}`}>
       <ClickTooltip tip={tip} className="font-mono text-xs">
         <span className="inline-flex items-center gap-0.5" onClick={() => handleSort(field)}>{label}<SortIcon field={field} /></span>
       </ClickTooltip>
+      <div
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-400/50"
+        onMouseDown={(e) => startResize(colIndex, e)}
+      />
     </TableHead>
   )
 
@@ -567,57 +601,51 @@ export function UserProfile({ userId }: UserProfileProps) {
         {/* Positions Table */}
         {paginated.length > 0 ? (
           <>
-            <div className="border rounded-md mt-4">
+            <div className="border rounded-md mt-4 overflow-x-auto">
               <TooltipProvider delayDuration={200}>
-                <Table className="table-fixed w-full min-w-[700px]">
+                <Table className="table-fixed" style={{ minWidth: `${colWidths.reduce((a, b) => a + b, 0)}px` }}>
                   <colgroup>
-                    <col style={{ minWidth: '240px' }} />
-                    <col className="w-[90px]" />
-                    <col className="w-[60px]" />
-                    <col className="w-[65px]" />
-                    <col className="w-[80px]" />
-                    <col className="w-[80px]" />
-                    <col className="w-[80px]" />
-                    <col className="w-[90px]" />
-                    <col className="w-[70px]" />
+                    {colWidths.map((w, i) => (
+                      <col key={i} style={{ width: `${w}px` }} />
+                    ))}
                   </colgroup>
                   <TableHeader className="bg-white dark:bg-gray-950">
                     <TableRow>
                       {tab === 'all' ? (
                         <>
-                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
-                          <Th field="outcome" label="Outcome" tip="outcome" />
-                          <Th field="qty" label="Qty" tip="totalBought or size" className="text-right" />
-                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
-                          <Th field="cost" label="Cost" tip="avgPrice × qty" className="text-right" />
-                          <Th field="pnl" label="P/L" tip="realizedPnl or cashPnl" className="text-right" />
-                          <Th field="value" label="Value" tip="cost + pnl" className="text-right" />
-                          <Th field="endDate" label="Close Date" tip="endDate" />
-                          <Th field="status" label="Status" tip="Active or Closed" />
+                          <Th field="title" label="Market" tip="title" colIndex={0} />
+                          <Th field="outcome" label="Outcome" tip="outcome" colIndex={1} />
+                          <Th field="qty" label="Qty" tip="totalBought or size" className="text-right" colIndex={2} />
+                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" colIndex={3} />
+                          <Th field="cost" label="Cost" tip="avgPrice × qty" className="text-right" colIndex={4} />
+                          <Th field="pnl" label="P/L" tip="realizedPnl or cashPnl" className="text-right" colIndex={5} />
+                          <Th field="value" label="Value" tip="cost + pnl" className="text-right" colIndex={6} />
+                          <Th field="endDate" label="Close Date" tip="endDate" colIndex={7} />
+                          <Th field="status" label="Status" tip="Active or Closed" colIndex={8} />
                         </>
                       ) : tab === 'closed' ? (
                         <>
-                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
-                          <Th field="outcome" label="Outcome" tip="outcome" />
-                          <Th field="totalBought" label="Qty" tip="totalBought" className="text-right" />
-                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
-                          <Th field="cost_closed" label="Cost" tip="avgPrice × totalBought" className="text-right" />
-                          <Th field="realizedPnl" label="P/L" tip="realizedPnl" className="text-right" />
-                          <Th field="value_closed" label="Value" tip="(avgPrice × totalBought) + realizedPnl" className="text-right" />
-                          <Th field="endDate" label="Close Date" tip="endDate" />
-                          <Th field="status" label="Status" tip="Active or Closed" />
+                          <Th field="title" label="Market" tip="title" colIndex={0} />
+                          <Th field="outcome" label="Outcome" tip="outcome" colIndex={1} />
+                          <Th field="totalBought" label="Qty" tip="totalBought" className="text-right" colIndex={2} />
+                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" colIndex={3} />
+                          <Th field="cost_closed" label="Cost" tip="avgPrice × totalBought" className="text-right" colIndex={4} />
+                          <Th field="realizedPnl" label="P/L" tip="realizedPnl" className="text-right" colIndex={5} />
+                          <Th field="value_closed" label="Value" tip="(avgPrice × totalBought) + realizedPnl" className="text-right" colIndex={6} />
+                          <Th field="endDate" label="Close Date" tip="endDate" colIndex={7} />
+                          <Th field="status" label="Status" tip="Active or Closed" colIndex={8} />
                         </>
                       ) : (
                         <>
-                          <Th field="title" label="Market" tip="title" className="min-w-[180px]" />
-                          <Th field="outcome" label="Outcome" tip="outcome" />
-                          <Th field="size" label="Qty" tip="size" className="text-right" />
-                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" />
-                          <Th field="cost_open" label="Cost" tip="avgPrice × size" className="text-right" />
-                          <Th field="cashPnl" label="P/L" tip="cashPnl" className="text-right" />
-                          <Th field="currentValue" label="Value" tip="currentValue" className="text-right" />
-                          <Th field="endDate" label="Close Date" tip="endDate" />
-                          <Th field="status" label="Status" tip="Active or Closed" />
+                          <Th field="title" label="Market" tip="title" colIndex={0} />
+                          <Th field="outcome" label="Outcome" tip="outcome" colIndex={1} />
+                          <Th field="size" label="Qty" tip="size" className="text-right" colIndex={2} />
+                          <Th field="avgPrice" label="Avg" tip="avgPrice" className="text-right" colIndex={3} />
+                          <Th field="cost_open" label="Cost" tip="avgPrice × size" className="text-right" colIndex={4} />
+                          <Th field="cashPnl" label="P/L" tip="cashPnl" className="text-right" colIndex={5} />
+                          <Th field="currentValue" label="Value" tip="currentValue" className="text-right" colIndex={6} />
+                          <Th field="endDate" label="Close Date" tip="endDate" colIndex={7} />
+                          <Th field="status" label="Status" tip="Active or Closed" colIndex={8} />
                         </>
                       )}
                     </TableRow>
