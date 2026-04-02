@@ -690,7 +690,7 @@ function StatCard({ label, value, highlight, className }: {
   className?: string
 }) {
   return (
-    <div className={`p-3 rounded-md border flex-1 min-w-[140px] ${highlight ? 'border-orange-500/30 bg-orange-500/5' : ''}`}>
+    <div className={`p-3 rounded-md border flex-1 min-w-[140px] ${highlight ? 'border-cyan-500/30 bg-cyan-500/5' : ''}`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-sm font-semibold font-mono ${className || ''}`}>{value}</p>
     </div>
