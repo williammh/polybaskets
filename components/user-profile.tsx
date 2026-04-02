@@ -134,9 +134,9 @@ export function UserProfile({ userId }: UserProfileProps) {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [calendarOpenSm, setCalendarOpenSm] = useState(false)
 
-  const [sortAll, setSortAll] = useState<SortState>({ field: 'pnl', dir: 'DESC' })
-  const [sortClosed, setSortClosed] = useState<SortState>({ field: 'realizedPnl', dir: 'DESC' })
-  const [sortOpen, setSortOpen] = useState<SortState>({ field: 'currentValue', dir: 'DESC' })
+  const [sortAll, setSortAll] = useState<SortState>({ field: 'endDate', dir: 'DESC' })
+  const [sortClosed, setSortClosed] = useState<SortState>({ field: 'endDate', dir: 'DESC' })
+  const [sortOpen, setSortOpen] = useState<SortState>({ field: 'endDate', dir: 'DESC' })
   const sort = tab === 'all' ? sortAll : tab === 'closed' ? sortClosed : sortOpen
 
   const handleSort = useCallback((field: string) => {
@@ -567,7 +567,7 @@ export function UserProfile({ userId }: UserProfileProps) {
         {/* Positions Table */}
         {paginated.length > 0 ? (
           <>
-            <div className="border rounded-md overflow-x-auto mt-4">
+            <div className="border rounded-md mt-4">
               <TooltipProvider delayDuration={200}>
                 <Table className="table-fixed w-full min-w-[700px]">
                   <colgroup>
@@ -632,7 +632,7 @@ export function UserProfile({ userId }: UserProfileProps) {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-muted-foreground">{filteredRows.length} positions</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
