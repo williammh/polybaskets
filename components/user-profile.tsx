@@ -124,8 +124,8 @@ export function UserProfile({ userId }: UserProfileProps) {
   const [page, setPage] = useState(1)
   const PER_PAGE = 50
 
-  type BetType = 'moneyline' | 'overunder' | 'spread'
-  const ALL_BET_TYPES: BetType[] = ['moneyline', 'overunder', 'spread']
+  type BetType = 'moneyline' | 'overunder' | 'spread' | 'misc'
+  const ALL_BET_TYPES: BetType[] = ['moneyline', 'overunder', 'spread', 'misc']
   const [betTypeFilter, setBetTypeFilter] = useState<Set<BetType>>(new Set(ALL_BET_TYPES))
   const [minCloseDate, setMinCloseDate] = useState("")
   const [minCalendarOpen, setMinCalendarOpen] = useState(false)
@@ -243,10 +243,13 @@ export function UserProfile({ userId }: UserProfileProps) {
     if (betTypeFilter.size === ALL_BET_TYPES.length) return true
     const isOverUnder = title.includes(': O/U')
     const isSpread = title.includes('Spread:')
-    const isMoneyline = !isOverUnder && !isSpread
+    const isMoneyline = !isOverUnder && !isSpread && title.includes('vs.')
+    const isMisc = !isOverUnder && !isSpread && !isMoneyline
+
     if (betTypeFilter.has('overunder') && isOverUnder) return true
     if (betTypeFilter.has('spread') && isSpread) return true
     if (betTypeFilter.has('moneyline') && isMoneyline) return true
+    if (betTypeFilter.has('misc') && isMisc) return true
     return false
   }, [betTypeFilter])
 
@@ -372,8 +375,8 @@ export function UserProfile({ userId }: UserProfileProps) {
             {/* Row 1: checkboxes + date pickers */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2">
               <div className="flex items-center gap-3 h-8">
-                {(['moneyline', 'overunder', 'spread'] as const).map((type) => {
-                  const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread' }
+                {(['moneyline', 'overunder', 'spread', 'misc'] as const).map((type) => {
+                  const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread', misc: 'Misc' }
                   return (
                     <div key={type} className="flex items-center gap-1.5">
                       <Checkbox
@@ -430,7 +433,7 @@ export function UserProfile({ userId }: UserProfileProps) {
                     </button>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">to</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap"></span>
                 <div className="relative flex-1 lg:flex-none max-w-44">
                   <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
@@ -489,8 +492,8 @@ export function UserProfile({ userId }: UserProfileProps) {
           <div className="flex flex-col gap-2 md:hidden">
             {/* Row 1: checkboxes */}
             <div className="flex items-center gap-3 h-8">
-              {(['moneyline', 'overunder', 'spread'] as const).map((type) => {
-                const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread' }
+              {(['moneyline', 'overunder', 'spread', 'misc'] as const).map((type) => {
+                const labels: Record<typeof type, string> = { moneyline: 'Moneyline', overunder: 'Over/Under', spread: 'Spread', misc: 'Misc' }
                 return (
                   <div key={type} className="flex items-center gap-1.5">
                     <Checkbox
